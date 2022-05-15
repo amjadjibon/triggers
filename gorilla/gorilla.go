@@ -18,6 +18,8 @@ import (
 	"github.com/mkawserm/abesh/model"
 	"github.com/mkawserm/abesh/registry"
 	"github.com/mkawserm/abesh/utility"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
@@ -29,6 +31,14 @@ type EventResponse struct {
 	Event *model.Event
 }
 
+var responseStatus = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "abesh_httpserver_response_status",
+		Help: "Status of HTTP Response",
+	},
+	[]string{"trigger", "service", "path", "method", "status"},
+)
+
 type HttpServerGorilla struct {
 	mCM                       model.ConfigMap
 	mHost                     string
@@ -38,6 +48,8 @@ type HttpServerGorilla struct {
 	mStaticDir                string
 	mStaticPath               string
 	mHealthPath               string
+	mMetricPath               string
+	mIsMetricsEnabled         bool
 	mHttpServer               *http.Server
 	mHttpServerMux            *mux.Router
 	mRequestTimeout           time.Duration
@@ -98,9 +110,13 @@ func (h *HttpServerGorilla) SetConfigMap(cm model.ConfigMap) error {
 	h.mRequestTimeout = cm.Duration("default_request_timeout", time.Second)
 
 	h.mDefault404HandlerEnabled = cm.Bool("default_404_handler_enabled", true)
+	h.mDefault405HandlerEnabled = cm.Bool("default_405_handler_enabled", true)
 	h.mHandleMethodNotAllowed = cm.Bool("handle_method_not_allowed", false)
 
 	h.mDefaultContentType = cm.String("default_content_type", "application/json")
+
+	h.mIsMetricsEnabled = cm.Bool("metrics_enabled", false)
+	h.mMetricPath = cm.String("metric_path", "/metrics")
 
 	h.d401m = h.buildDefaultMessage(401)
 	h.d403m = h.buildDefaultMessage(403)
@@ -135,7 +151,8 @@ func (h *HttpServerGorilla) Setup() error {
 			defer func() {
 				logger.L(h.ContractId()).Debug("request completed")
 				elapsed := time.Since(timerStart)
-				logger.L(h.ContractId()).Debug("request execution time", zap.Duration("seconds", elapsed))
+				logger.L(h.ContractId()).Debug("request execution time",
+					zap.Duration("seconds", elapsed))
 			}()
 			h.s405m(request, writer, nil)
 			return
@@ -162,14 +179,13 @@ func (h *HttpServerGorilla) Setup() error {
 	// register data path
 	if len(h.mStaticDir) != 0 {
 		fi, e := os.Stat(h.mStaticDir)
-
 		if e != nil {
 			logger.L(h.ContractId()).Error(e.Error())
 		} else {
 			if fi.IsDir() {
 				logger.L(h.ContractId()).Debug("data path", zap.String("static_path", h.mStaticPath))
-				fs := http.FileServer(http.Dir(h.mStaticPath))
-				h.mHttpServerMux.PathPrefix(h.mStaticPath).Handler(fs)
+				fs := http.FileServer(http.Dir(h.mStaticDir))
+				h.mHttpServerMux.PathPrefix(h.mStaticPath).Handler(http.StripPrefix(h.mStaticPath, fs))
 			} else {
 				logger.L(h.ContractId()).Error("provided static_dir in the manifest conf is not directory")
 			}
@@ -187,6 +203,11 @@ func (h *HttpServerGorilla) Setup() error {
 			})
 	}
 
+	if h.mIsMetricsEnabled {
+		h.AddHandler(h.mMetricPath, promhttp.Handler())
+		logger.L(h.ContractId()).Info("metrics enabled", zap.String("metric_path", h.mMetricPath))
+	}
+
 	logger.L(h.ContractId()).Info("http server setup complete",
 		zap.String("host", h.mHost),
 		zap.String("port", h.mPort))
@@ -200,8 +221,7 @@ func (h *HttpServerGorilla) Start(context.Context) error {
 		if !strings.HasSuffix(p, "/") {
 			p = p + "/"
 		}
-
-		h.ServeFiles(p+"*filepath", p[0:len(p)-1], http.FS(d))
+		h.ServeFiles(p, http.FS(d))
 	}
 
 	logger.L(h.ContractId()).Info("http server started at " + h.mHttpServer.Addr)
@@ -317,39 +337,43 @@ func (h *HttpServerGorilla) writeMessage(statusCode int, defaultMessage string, 
 }
 
 func (h *HttpServerGorilla) s401m(request *http.Request, writer http.ResponseWriter, errLocal error) {
+	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "401").Inc()
 	h.writeMessage(401, h.d401m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s403m(request *http.Request, writer http.ResponseWriter, errLocal error) {
+	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "403").Inc()
 	h.writeMessage(403, h.d403m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s404m(request *http.Request, writer http.ResponseWriter, errLocal error) {
+	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "404").Inc()
 	h.writeMessage(404, h.d404m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s405m(request *http.Request, writer http.ResponseWriter, errLocal error) {
+	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "405").Inc()
 	h.writeMessage(405, h.d405m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s408m(request *http.Request, writer http.ResponseWriter, errLocal error) {
+	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "408").Inc()
 	h.writeMessage(408, h.d408m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s499m(request *http.Request, writer http.ResponseWriter, errLocal error) {
+	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "499").Inc()
 	h.writeMessage(499, h.d499m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s500m(request *http.Request, writer http.ResponseWriter, errLocal error) {
+	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "500").Inc()
 	h.writeMessage(500, h.d500m, request, writer, errLocal)
 }
 
-func (h *HttpServerGorilla) ServeFiles(path string, prefix string, root http.FileSystem) {
-	if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
-		panic("path must end with /*filepath in path '" + path + "'")
-	}
+func (h *HttpServerGorilla) ServeFiles(path string, root http.FileSystem) {
 	var fileServer = http.FileServer(root)
-	h.mHttpServerMux.Methods("GET").Subrouter().PathPrefix(path).Handler(http.StripPrefix(path, fileServer))
+	h.mHttpServerMux.Methods("GET").PathPrefix(path).Handler(http.StripPrefix(path, fileServer))
 }
 
 func (h *HttpServerGorilla) debugMessage(request *http.Request) {
@@ -359,6 +383,14 @@ func (h *HttpServerGorilla) debugMessage(request *http.Request) {
 		zap.String("path", request.URL.Path),
 		zap.String("method", request.Method),
 		zap.String("path_with_query", request.RequestURI))
+}
+
+func (h *HttpServerGorilla) AddHandlerFunc(pattern string, handler http.HandlerFunc) {
+	h.mHttpServerMux.HandleFunc(pattern, handler)
+}
+
+func (h *HttpServerGorilla) AddHandler(pattern string, handler http.Handler) {
+	h.mHttpServerMux.Handle(pattern, handler)
 }
 
 func (h *HttpServerGorilla) AddService(
@@ -497,6 +529,17 @@ func (h *HttpServerGorilla) AddService(
 				return
 			}
 
+			// NOTE: PROMETHEUS RESPONSE STATISTICS
+			go func() {
+				responseStatus.WithLabelValues(
+					h.ContractId(),
+					service.ContractId(),
+					request.URL.Path,
+					request.Method,
+					fmt.Sprintf("%d", r.Event.Metadata.StatusCode),
+				).Inc()
+			}()
+
 			// transmit output event
 			err = h.TransmitOutputEvent(service.ContractId(), r.Event)
 			if err != nil {
@@ -525,5 +568,6 @@ func (h *HttpServerGorilla) AddService(
 }
 
 func init() {
+	prometheus.MustRegister(responseStatus)
 	registry.GlobalRegistry().AddCapability(&HttpServerGorilla{})
 }

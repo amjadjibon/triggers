@@ -6,6 +6,10 @@ capabilities:
       host: "0.0.0.0"
       port: "8080"
       default_request_timeout: "5s"
+      static_path: "/static/"
+      static_dir: "./"
+      metrics_path: "/metrics"
+      metrics_enabled: true
 
   - contract_id: "abesh:ex_echo"
     values:
@@ -13,11 +17,11 @@ capabilities:
       key2: "test2"
 
 triggers:
-  - trigger: "abesh:httpserver"
+  - trigger: "abesh:trigger:gorilla"
     trigger_values:
-      method: "GET"
-      path: "/default"
+      method: "GET,POST"
+      path: "/default/{id}/user/{user_id}"
     service: "abesh:ex_echo"
 
 start:
-  - "abesh:httpserver"
+  - "abesh:trigger:gorilla"
