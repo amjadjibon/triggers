@@ -7,8 +7,8 @@ import (
 	"github.com/mkawserm/abesh/cmd"
 	"github.com/spf13/cobra"
 
-	"github.com/amjadjibon/triggers/gorilla"
-	_ "github.com/amjadjibon/triggers/gorilla"
+	"github.com/amjadjibon/triggers/gorilla/capability/gorilla"
+	_ "github.com/amjadjibon/triggers/gorilla/capability/gorilla"
 
 	_ "github.com/mkawserm/abesh/example/echo"
 )
