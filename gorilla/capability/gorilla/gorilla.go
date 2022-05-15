@@ -337,37 +337,37 @@ func (h *HttpServerGorilla) writeMessage(statusCode int, defaultMessage string, 
 }
 
 func (h *HttpServerGorilla) s401m(request *http.Request, writer http.ResponseWriter, errLocal error) {
-	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "401").Inc()
+	go responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "401").Inc()
 	h.writeMessage(401, h.d401m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s403m(request *http.Request, writer http.ResponseWriter, errLocal error) {
-	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "403").Inc()
+	go responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "403").Inc()
 	h.writeMessage(403, h.d403m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s404m(request *http.Request, writer http.ResponseWriter, errLocal error) {
-	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "404").Inc()
+	go responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "404").Inc()
 	h.writeMessage(404, h.d404m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s405m(request *http.Request, writer http.ResponseWriter, errLocal error) {
-	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "405").Inc()
+	go responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "405").Inc()
 	h.writeMessage(405, h.d405m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s408m(request *http.Request, writer http.ResponseWriter, errLocal error) {
-	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "408").Inc()
+	go responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "408").Inc()
 	h.writeMessage(408, h.d408m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s499m(request *http.Request, writer http.ResponseWriter, errLocal error) {
-	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "499").Inc()
+	go responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "499").Inc()
 	h.writeMessage(499, h.d499m, request, writer, errLocal)
 }
 
 func (h *HttpServerGorilla) s500m(request *http.Request, writer http.ResponseWriter, errLocal error) {
-	responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "500").Inc()
+	go responseStatus.WithLabelValues(h.ContractId(), "", request.URL.Path, request.Method, "500").Inc()
 	h.writeMessage(500, h.d500m, request, writer, errLocal)
 }
 
