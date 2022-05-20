@@ -1,0 +1,25 @@
+basePath: /api/v2
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server example server.
+  license:
+    name: MIT License
+    url: http://www.opensource.org/licenses/mit-license.php
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Example API
+  version: "1.0"
+paths:
+  /echo:
+    get:
+      description: echo
+      responses:
+        "200":
+          description: echo
+          schema:
+            type: string
+      summary: echo
+swagger: "2.0"

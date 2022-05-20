@@ -1,0 +1,14 @@
+version: "1"
+
+capabilities:
+  - contract_id: "abesh:trigger:gorilla"
+    values:
+      host: "0.0.0.0"
+      port: "8080"
+      default_request_timeout: "5s"
+      static_path: "/static/"
+      static_dir: "./"
+      metrics_path: "/metrics"
+      metrics_enabled: true
+      swagger_path: "/swagger"
+      swagger_enabled: true

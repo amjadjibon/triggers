@@ -20,6 +20,7 @@ import (
 	"github.com/mkawserm/abesh/utility"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 )
 
@@ -59,6 +60,8 @@ type HttpServerGorilla struct {
 	mDefault404HandlerEnabled bool
 	mDefault405HandlerEnabled bool
 	mHandleMethodNotAllowed   bool
+	mSwaggerEnabled           bool
+	mSwaggerPath              string
 
 	/* Default Http Responses */
 	d401m string
@@ -117,6 +120,9 @@ func (h *HttpServerGorilla) SetConfigMap(cm model.ConfigMap) error {
 
 	h.mIsMetricsEnabled = cm.Bool("metrics_enabled", false)
 	h.mMetricPath = cm.String("metric_path", "/metrics")
+
+	h.mSwaggerEnabled = cm.Bool("swagger_enabled", false)
+	h.mSwaggerPath = cm.String("swagger_path", "/swagger/")
 
 	h.d401m = h.buildDefaultMessage(401)
 	h.d403m = h.buildDefaultMessage(403)
@@ -206,6 +212,12 @@ func (h *HttpServerGorilla) Setup() error {
 	if h.mIsMetricsEnabled {
 		h.AddHandler(h.mMetricPath, promhttp.Handler())
 		logger.L(h.ContractId()).Info("metrics enabled", zap.String("metric_path", h.mMetricPath))
+	}
+
+	if h.mSwaggerEnabled {
+		h.mHttpServerMux.Methods("GET").
+			PathPrefix(h.mSwaggerPath).
+			Handler(httpSwagger.Handler())
 	}
 
 	logger.L(h.ContractId()).Info("http server setup complete",

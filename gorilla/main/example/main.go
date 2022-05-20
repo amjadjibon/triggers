@@ -9,6 +9,7 @@ import (
 
 	"github.com/amjadjibon/triggers/gorilla/capability/gorilla"
 	_ "github.com/amjadjibon/triggers/gorilla/capability/gorilla"
+	_ "github.com/amjadjibon/triggers/gorilla/main/example/swagger/docs"
 
 	_ "github.com/mkawserm/abesh/example/echo"
 )

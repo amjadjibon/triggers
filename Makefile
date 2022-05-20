@@ -16,3 +16,9 @@ bench:
 update-module:
 	go env -w GOPRIVATE=github.com/mkawserm
 	go get -v github.com/mkawserm/abesh
+
+install-swag:
+	go install github.com/swaggo/swag/cmd/swag@latest
+
+swag-init:
+	swag init -g=swagger.go
